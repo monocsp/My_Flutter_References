@@ -1,9 +1,8 @@
 import 'dart:developer';
-
-import 'package:custom_bottomnavigationbar/CustomNavigationbar/rx_index_controller.dart';
 import 'package:custom_bottomnavigationbar/home1.dart';
 import 'package:custom_bottomnavigationbar/home2.dart';
 import 'package:custom_bottomnavigationbar/home3.dart';
+import 'package:custom_bottomnavigationbar/rx_index_controller.dart';
 import 'package:flutter/material.dart';
 
 void main() {
