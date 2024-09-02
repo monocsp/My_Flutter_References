@@ -1,4 +1,3 @@
-import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
@@ -33,7 +32,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation _animation;
+  late final Animation<double> _animation;
   final CurveTween curve = CurveTween(curve: Curves.easeInOutCubic);
   double delta = 0;
 
@@ -41,26 +40,36 @@ class _MyHomePageState extends State<MyHomePage>
   void initState() {
     super.initState();
     _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 750));
-    _animation =
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubic);
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    );
 
+    // Tween을 사용해 delta가 0에서 0.5로, 다시 0으로 이동하도록 설정
+    _animation = Tween<double>(begin: 0, end: 0.125)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+    // 애니메이션의 변화에 따라 delta 값을 업데이트
     _animation.addListener(() {
       setState(() {
-        delta = _controller.value;
+        delta = _animation.value;
       });
+    });
+
+    // 애니메이션이 끝나면 reverse를 호출해 반대 방향으로 움직이도록 설정
+    _controller.forward();
+    _controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _controller.reverse();
+      } else if (status == AnimationStatus.dismissed) {
+        _controller.forward();
+      }
     });
   }
 
-  void panUpdate(double dx) {
-    setState(() => {
-          delta += (dx / 100),
-          if (delta > .5) delta = .5,
-          if (delta < -.5) delta = -.5,
-        });
-
-    _controller.value = delta;
-    dev.log("delta : $delta");
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -72,103 +81,48 @@ class _MyHomePageState extends State<MyHomePage>
           alignment: FractionalOffset.center,
           transform: Matrix4.identity()
             ..setEntry(3, 2, 0.001)
-            ..rotateY(delta),
-          child: GestureDetector(
-            onPanDown: (_) => _controller.stop(),
-            onPanUpdate: (_) => panUpdate(-_.delta.dx),
-            onPanEnd: (_) => _controller.reverse(),
-            child: Transform.rotate(
-              angle: -math.pi / 12,
-              child: Stack(
-                children: [
-                  Container(
+            ..rotateY(delta * math.pi * 2), // 0에서 0.5로 변화할 때 부드럽게 회전
+          child: Transform.rotate(
+            angle: -math.pi / 12,
+            child: Stack(
+              children: [
+                Container(
                     padding: const EdgeInsets.all(12.0),
                     width: 53.98 * 3,
                     height: 85.60 * 3,
                     decoration: BoxDecoration(
-                      color: Colors.purple,
+                      // color: Colors.purple,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Row(
-                          children: [
-                            const SizedBox(width: 96),
-                            Container(
-                              height: 32,
-                              width: 8,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(2.5),
-                                  bottomLeft: Radius.circular(2.5),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: .5),
-                            Container(
-                                height: 32, width: 8, color: Colors.white),
-                            const SizedBox(width: .5),
-                            Container(
-                              height: 32,
-                              width: 8,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.only(
-                                  topRight: Radius.circular(2.5),
-                                  bottomRight: Radius.circular(2.5),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 64),
-                        const Text(
-                          'TEST TEXT',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 64),
-                        Text(
-                          'toss bank',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(.3),
-                            fontSize: 15,
-                          ),
-                        ),
+                    child: Image.asset(
+                      'assets/card.jpg',
+                      fit: BoxFit.fill,
+                    )),
+                Container(
+                  width: 53.98 * 3,
+                  height: 85.60 * 3,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(10),
+                    gradient: RadialGradient(
+                      center: Alignment(
+                        Tween(begin: -7.5 / 4, end: 6.0 / 4)
+                            .chain(curve)
+                            .evaluate(_controller),
+                        Tween(begin: -1.5 / 4, end: 2.0 / 4)
+                            .chain(curve)
+                            .evaluate(_controller),
+                      ),
+                      radius: 1.75,
+                      colors: [
+                        /// 빛 반사 강함정도
+                        Colors.white.withOpacity(.9),
+                        Colors.black.withOpacity(.0),
                       ],
                     ),
                   ),
-                  Container(
-                    width: 53.98 * 3,
-                    height: 85.60 * 3,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(10),
-                      gradient: RadialGradient(
-                        center: Alignment(
-                          Tween(begin: -7.5 / 4, end: 6.0 / 4)
-                              .chain(curve)
-                              .evaluate(_controller),
-                          Tween(begin: -1.5 / 4, end: 2.0 / 4)
-                              .chain(curve)
-                              .evaluate(_controller),
-                        ),
-                        radius: 1.75,
-                        colors: [
-                          Colors.white.withOpacity(.32),
-                          Colors.black.withOpacity(.24),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
