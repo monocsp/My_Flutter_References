@@ -102,14 +102,18 @@
 //   }
 // }
 
+import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:image_metadata_map/naver_api_fetch.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:exif/exif.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+Future main() async {
+  await dotenv.load(fileName: ".env");
   runApp(MaterialApp(
     home: ImageMetadataScreen(),
     debugShowCheckedModeBanner: false,
@@ -203,6 +207,24 @@ class _ImageMetadataScreenState extends State<ImageMetadataScreen> {
             icon: const Icon(Icons.image),
             label: const Text('Choose Image'),
           ),
+          Column(
+            children: [
+              Text("주소지 : "),
+              if (_metadata != null)
+                FutureBuilder(
+                  future:
+                      AddressService.getAddress(convertGPSDataToXY(_metadata!)),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return SizedBox();
+                    }
+                    if (!snapshot.hasData) return SizedBox();
+                    if (snapshot.hasError) return SizedBox();
+                    return Text(snapshot.data ?? "");
+                  },
+                )
+            ],
+          ),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(8.0),
@@ -212,5 +234,61 @@ class _ImageMetadataScreenState extends State<ImageMetadataScreen> {
         ],
       ),
     );
+  }
+
+  String convertGPSDataToXY(Map<String, dynamic> metadata) {
+    try {
+      // 메타데이터에서 GPSLatitude, GPSLongitude, Ref 정보 가져오기
+      final IfdTag gpsLatitude = metadata['GPS GPSLatitude'];
+      final IfdTag gpsLatitudeRef = metadata['GPS GPSLatitudeRef'];
+      final IfdTag gpsLongitude = metadata['GPS GPSLongitude'];
+      final IfdTag gpsLongitudeRef = metadata['GPS GPSLongitudeRef'];
+
+      if (gpsLatitude != null &&
+          gpsLongitude != null &&
+          gpsLatitudeRef != null &&
+          gpsLongitudeRef != null) {
+        // 위도와 경도를 소수점 형태로 변환
+        return convertGPSIfdTagToXY(gpsLatitude, gpsLatitudeRef.printable,
+            gpsLongitude, gpsLongitudeRef.printable);
+      } else {
+        return "";
+      }
+    } catch (e) {
+      log("ERROR : $e");
+      return "";
+    }
+  }
+
+  String convertGPSIfdTagToXY(IfdTag latitudeTag, String latitudeRef,
+      IfdTag longitudeTag, String longitudeRef) {
+    try {
+      // IfdTag에서 values를 추출해 변환
+      double latitude = _convertDMSToDecimal(latitudeTag.values, latitudeRef);
+      double longitude =
+          _convertDMSToDecimal(longitudeTag.values, longitudeRef);
+
+      // "경도,위도" 문자열로 반환
+      return "${longitude.toStringAsFixed(6)},${latitude.toStringAsFixed(6)}";
+    } catch (e) {
+      return "Error parsing GPS data: $e";
+    }
+  }
+
+  double _convertDMSToDecimal(IfdValues dmsIfdValues, String ref) {
+    List<dynamic> dms = dmsIfdValues.toList();
+    // IfdRatios 리스트에서 값을 추출하여 degrees, minutes, seconds 계산
+    double degrees = dms[0].numerator / dms[0].denominator;
+    double minutes = dms[1].numerator / dms[1].denominator;
+    double seconds = dms[2].numerator / dms[2].denominator;
+
+    // DMS를 소수점(decimal)으로 변환
+    double decimal = degrees + (minutes / 60) + (seconds / 3600);
+
+    // Ref가 S 또는 W인 경우 음수 처리
+    if (ref == 'S' || ref == 'W') {
+      decimal = -decimal;
+    }
+    return decimal;
   }
 }
