@@ -1,112 +1,10 @@
-// import 'dart:io';
-
-// import 'package:exif/exif.dart';
-// import 'package:flutter/foundation.dart';
-// import 'package:flutter/material.dart';
-// import 'package:image_picker/image_picker.dart';
-
-// void main() {
-//   runApp(const MyApp());
-// }
-
-// class MyApp extends StatelessWidget {
-//   const MyApp({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return MaterialApp(
-//       title: 'Flutter Demo',
-//       theme: ThemeData(
-//         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-//         useMaterial3: true,
-//       ),
-//       home: const ImagePickerWithExif(),
-//     );
-//   }
-// }
-
-// class ImagePickerWithExif extends StatefulWidget {
-//   const ImagePickerWithExif({super.key});
-
-//   @override
-//   _ImagePickerWithExifState createState() => _ImagePickerWithExifState();
-// }
-
-// class _ImagePickerWithExifState extends State<ImagePickerWithExif> {
-//   File? _selectedImage;
-//   Map<String, IfdTag> _metadata = {};
-
-//   Future<void> _pickImage() async {
-//     final picker = ImagePicker();
-//     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-//     if (pickedFile == null) return;
-
-//     setState(() {
-//       _selectedImage = File(pickedFile.path);
-//     });
-
-//     // EXIF 메타데이터 읽기
-//     final bytes = await pickedFile.readAsBytes();
-//     final data = await readExifFromBytes(Uint8List.fromList(bytes));
-
-//     if (data.isNotEmpty) {
-//       setState(() {
-//         _metadata = data;
-//       });
-//     } else {
-//       setState(() {
-//         _metadata = {};
-//       });
-//       print("No EXIF information found");
-//     }
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text('Image Picker & EXIF Metadata'),
-//       ),
-//       body: Column(
-//         children: [
-//           Expanded(
-//             child: Center(
-//               child: _selectedImage == null
-//                   ? const Text('이미지를 선택해주세요.')
-//                   : Image.file(_selectedImage!),
-//             ),
-//           ),
-//           ElevatedButton.icon(
-//             onPressed: _pickImage,
-//             icon: const Icon(Icons.add),
-//             label: const Text('이미지 가져오기'),
-//           ),
-//           const SizedBox(height: 10),
-//           if (_metadata.isNotEmpty)
-//             Expanded(
-//               child: ListView(
-//                 children: _metadata.entries.map((entry) {
-//                   return ListTile(
-//                     title: Text(entry.key),
-//                     subtitle: Text(entry.value.toString()),
-//                   );
-//                 }).toList(),
-//               ),
-//             ),
-//           if (_metadata.isEmpty && _selectedImage != null)
-//             const Text('메타데이터를 찾을 수 없습니다.'),
-//         ],
-//       ),
-//     );
-//   }
-// }
-
 import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
+import 'package:image_metadata_map/ml_image_labeling_service.dart';
 import 'package:image_metadata_map/naver_api_fetch.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:exif/exif.dart';
@@ -128,6 +26,9 @@ class ImageMetadataScreen extends StatefulWidget {
 class _ImageMetadataScreenState extends State<ImageMetadataScreen> {
   File? _image; // 선택된 이미지
   Map<String, IfdTag>? _metadata; // 메타데이터 저장
+  List<ImageLabel>? _labels; // 이미지 라벨링 결과 저장
+  final MLImageLabelingService _mlService =
+      MLImageLabelingService(); // ML Kit 서비스 인스턴스
 
   // 갤러리에서 이미지 가져오기
   Future<void> _getImage() async {
@@ -138,8 +39,24 @@ class _ImageMetadataScreenState extends State<ImageMetadataScreen> {
       setState(() {
         _image = File(pickedImage.path);
         _metadata = null; // 새로운 이미지 선택 시 메타데이터 초기화
+        _labels = null; // 새로운 이미지 선택 시 라벨 초기화
       });
       _extractMetadata();
+      _analyzeImage(); // 이미지 분석 추가
+    }
+  }
+
+  // 이미지 라벨 분석
+  Future<void> _analyzeImage() async {
+    if (_image == null) return;
+
+    try {
+      final labels = await _mlService.processImage(_image!);
+      setState(() {
+        _labels = labels;
+      });
+    } catch (e) {
+      print('Error analyzing image: $e');
     }
   }
 
@@ -159,6 +76,27 @@ class _ImageMetadataScreenState extends State<ImageMetadataScreen> {
     } catch (e) {
       print('Error extracting metadata: $e');
     }
+  }
+
+  // 라벨 출력 위젯
+  Widget _buildLabelsList() {
+    if (_labels == null || _labels!.isEmpty) {
+      return const Center(
+        child: Text(
+          'No labels detected',
+          style: TextStyle(fontSize: 16),
+        ),
+      );
+    }
+
+    return ListView(
+      children: _labels!.map((label) {
+        return ListTile(
+          title: Text(label.label),
+          subtitle: Text('Confidence: ${label.confidence.toStringAsFixed(2)}'),
+        );
+      }).toList(),
+    );
   }
 
   // 메타데이터 출력 위젯
@@ -182,11 +120,65 @@ class _ImageMetadataScreenState extends State<ImageMetadataScreen> {
     );
   }
 
+  // @override
+  // Widget build(BuildContext context) {
+  //   return Scaffold(
+  //     appBar: AppBar(
+  //       title: const Text('Image Metadata Viewer'),
+  //     ),
+  //     body: Column(
+  //       crossAxisAlignment: CrossAxisAlignment.stretch,
+  //       children: [
+  //         Expanded(
+  //           child: _image != null
+  //               ? Image.file(
+  //                   _image!,
+  //                   fit: BoxFit.cover,
+  //                 )
+  //               : const Placeholder(
+  //                   fallbackHeight: 200,
+  //                   color: Colors.grey,
+  //                 ),
+  //         ),
+  //         ElevatedButton.icon(
+  //           onPressed: _getImage,
+  //           icon: const Icon(Icons.image),
+  //           label: const Text('Choose Image'),
+  //         ),
+  //         Column(
+  //           children: [
+  //             Text("주소지 : "),
+  //             if (_metadata != null)
+  //               FutureBuilder(
+  //                 future:
+  //                     AddressService.getAddress(convertGPSDataToXY(_metadata!)),
+  //                 builder: (context, snapshot) {
+  //                   if (snapshot.connectionState != ConnectionState.done) {
+  //                     return SizedBox();
+  //                   }
+  //                   if (!snapshot.hasData) return SizedBox();
+  //                   if (snapshot.hasError) return SizedBox();
+  //                   return Text(snapshot.data ?? "");
+  //                 },
+  //               )
+  //           ],
+  //         ),
+  //         Expanded(
+  //           child: Padding(
+  //             padding: const EdgeInsets.all(8.0),
+  //             child: _buildMetadataList(),
+  //           ),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Image Metadata Viewer'),
+        title: const Text('Image Metadata & Label Viewer'),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -207,23 +199,21 @@ class _ImageMetadataScreenState extends State<ImageMetadataScreen> {
             icon: const Icon(Icons.image),
             label: const Text('Choose Image'),
           ),
-          Column(
-            children: [
-              Text("주소지 : "),
-              if (_metadata != null)
-                FutureBuilder(
-                  future:
-                      AddressService.getAddress(convertGPSDataToXY(_metadata!)),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState != ConnectionState.done) {
-                      return SizedBox();
-                    }
-                    if (!snapshot.hasData) return SizedBox();
-                    if (snapshot.hasError) return SizedBox();
-                    return Text(snapshot.data ?? "");
-                  },
-                )
-            ],
+          const SizedBox(height: 8),
+          const Text(
+            'Labels:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: _buildLabelsList(),
+            ),
+          ),
+          const Divider(),
+          const Text(
+            'Metadata:',
+            style: TextStyle(fontWeight: FontWeight.bold),
           ),
           Expanded(
             child: Padding(
