@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:image_metadata_map/%08ml_text_recog_service.dart';
 import 'package:image_metadata_map/ml_image_labeling_service.dart';
 import 'package:image_metadata_map/naver_api_fetch.dart';
 import 'package:image_picker/image_picker.dart';
@@ -27,8 +29,10 @@ class _ImageMetadataScreenState extends State<ImageMetadataScreen> {
   File? _image; // 선택된 이미지
   Map<String, IfdTag>? _metadata; // 메타데이터 저장
   List<ImageLabel>? _labels; // 이미지 라벨링 결과 저장
-  final MLImageLabelingService _mlService =
-      MLImageLabelingService(); // ML Kit 서비스 인스턴스
+  List<TextBlock>? _textBlocks; // 텍스트 블록 저장
+  final MLImageLabelingService _mlService = MLImageLabelingService();
+  final MLTextRecognitionService _textService =
+      MLTextRecognitionService(); // 텍스트 인식 서비스
 
   // 갤러리에서 이미지 가져오기
   Future<void> _getImage() async {
@@ -43,6 +47,7 @@ class _ImageMetadataScreenState extends State<ImageMetadataScreen> {
       });
       _extractMetadata();
       _analyzeImage(); // 이미지 분석 추가
+      _analyzeText(); // 텍스트 분석 추가
     }
   }
 
@@ -58,6 +63,38 @@ class _ImageMetadataScreenState extends State<ImageMetadataScreen> {
     } catch (e) {
       print('Error analyzing image: $e');
     }
+  }
+
+  Future<void> _analyzeText() async {
+    if (_image == null) return;
+
+    try {
+      final textBlocks = await _textService.processImage(_image!);
+      setState(() {
+        _textBlocks = textBlocks;
+      });
+    } catch (e) {
+      print('Error recognizing text: $e');
+    }
+  }
+
+  Widget _buildTextList() {
+    if (_textBlocks == null || _textBlocks!.isEmpty) {
+      return const Center(
+        child: Text(
+          'No text recognized',
+          style: TextStyle(fontSize: 16),
+        ),
+      );
+    }
+
+    return ListView(
+      children: _textBlocks!.map((block) {
+        return Text(block.text
+            // subtitle: Text('Bounding Box: ${block.boundingBox.toString()}'),
+            );
+      }).toList(),
+    );
   }
 
   // 메타데이터 추출
@@ -120,60 +157,6 @@ class _ImageMetadataScreenState extends State<ImageMetadataScreen> {
     );
   }
 
-  // @override
-  // Widget build(BuildContext context) {
-  //   return Scaffold(
-  //     appBar: AppBar(
-  //       title: const Text('Image Metadata Viewer'),
-  //     ),
-  //     body: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.stretch,
-  //       children: [
-  //         Expanded(
-  //           child: _image != null
-  //               ? Image.file(
-  //                   _image!,
-  //                   fit: BoxFit.cover,
-  //                 )
-  //               : const Placeholder(
-  //                   fallbackHeight: 200,
-  //                   color: Colors.grey,
-  //                 ),
-  //         ),
-  //         ElevatedButton.icon(
-  //           onPressed: _getImage,
-  //           icon: const Icon(Icons.image),
-  //           label: const Text('Choose Image'),
-  //         ),
-  //         Column(
-  //           children: [
-  //             Text("주소지 : "),
-  //             if (_metadata != null)
-  //               FutureBuilder(
-  //                 future:
-  //                     AddressService.getAddress(convertGPSDataToXY(_metadata!)),
-  //                 builder: (context, snapshot) {
-  //                   if (snapshot.connectionState != ConnectionState.done) {
-  //                     return SizedBox();
-  //                   }
-  //                   if (!snapshot.hasData) return SizedBox();
-  //                   if (snapshot.hasError) return SizedBox();
-  //                   return Text(snapshot.data ?? "");
-  //                 },
-  //               )
-  //           ],
-  //         ),
-  //         Expanded(
-  //           child: Padding(
-  //             padding: const EdgeInsets.all(8.0),
-  //             child: _buildMetadataList(),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -211,6 +194,35 @@ class _ImageMetadataScreenState extends State<ImageMetadataScreen> {
             ),
           ),
           const Divider(),
+          const Text(
+            'Text Recognition:',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: _buildTextList(),
+            ),
+          ),
+          const Divider(),
+          Column(
+            children: [
+              Text("주소지 : "),
+              if (_metadata != null)
+                FutureBuilder(
+                  future:
+                      AddressService.getAddress(convertGPSDataToXY(_metadata!)),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return SizedBox();
+                    }
+                    if (!snapshot.hasData) return SizedBox();
+                    if (snapshot.hasError) return SizedBox();
+                    return Text(snapshot.data ?? "");
+                  },
+                ),
+            ],
+          ),
           const Text(
             'Metadata:',
             style: TextStyle(fontWeight: FontWeight.bold),
