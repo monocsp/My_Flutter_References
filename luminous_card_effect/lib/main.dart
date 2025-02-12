@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
+import 'package:luminous_card_effect/iuminous_widget.dart';
+
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
@@ -100,61 +102,67 @@ class _MyHomePageState extends State<MyHomePage> with TickerProviderStateMixin {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            FadeTransition(
-              opacity: _fadeAnimation, // fade-in 애니메이션 적용
-              child: Transform(
-                alignment: FractionalOffset.center,
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.001)
-                  ..rotateY(delta * math.pi * 2),
-                child: Transform.rotate(
-                  angle: -math.pi / 12,
-                  child: Stack(
-                    children: [
-                      Container(
-                          padding: const EdgeInsets.all(12.0),
-                          width: 53.98 * 3,
-                          height: 85.60 * 3,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Image.asset(
-                            'assets/card.jpg',
-                            fit: BoxFit.fill,
-                          )),
-                      Container(
-                        width: 53.98 * 3,
-                        height: 85.60 * 3,
-                        decoration: BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(10),
-                          gradient: RadialGradient(
-                            center: Alignment(
-                              Tween(begin: -7.5 / 4, end: 6.0 / 4)
-                                  .chain(curve)
-                                  .evaluate(_controller),
-                              Tween(begin: -1.5 / 4, end: 2.0 / 4)
-                                  .chain(curve)
-                                  .evaluate(_controller),
-                            ),
-                            radius: 1.75,
-                            colors: [
-                              Colors.white.withOpacity(.9),
-                              Colors.black.withOpacity(.0),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _startAnimation, // 버튼 클릭 시 애니메이션 시작
-              child: Text('Start Animation'),
-            ),
+            GradientOverlay(
+                child: Image.asset(
+              'assets/card.jpg',
+              fit: BoxFit.fill,
+            )),
+
+            // FadeTransition(
+            //   opacity: _fadeAnimation, // fade-in 애니메이션 적용
+            //   child: Transform(
+            //     alignment: FractionalOffset.center,
+            //     transform: Matrix4.identity()
+            //       ..setEntry(3, 2, 0.001)
+            //       ..rotateY(delta * math.pi * 2),
+            //     child: Transform.rotate(
+            //       angle: -math.pi / 12,
+            //       child: Stack(
+            //         children: [
+            //           Container(
+            //               padding: const EdgeInsets.all(12.0),
+            //               width: 53.98 * 3,
+            //               height: 85.60 * 3,
+            //               decoration: BoxDecoration(
+            //                 borderRadius: BorderRadius.circular(10),
+            //               ),
+            //               child: Image.asset(
+            //                 'assets/card.jpg',
+            //                 fit: BoxFit.fill,
+            //               )),
+            //           Container(
+            //             width: 53.98 * 3,
+            //             height: 85.60 * 3,
+            //             decoration: BoxDecoration(
+            //               color: Colors.black,
+            //               borderRadius: BorderRadius.circular(10),
+            //               gradient: RadialGradient(
+            //                 center: Alignment(
+            //                   Tween(begin: -7.5 / 4, end: 6.0 / 4)
+            //                       .chain(curve)
+            //                       .evaluate(_controller),
+            //                   Tween(begin: -1.5 / 4, end: 2.0 / 4)
+            //                       .chain(curve)
+            //                       .evaluate(_controller),
+            //                 ),
+            //                 radius: 1.75,
+            //                 colors: [
+            //                   Colors.white.withOpacity(.9),
+            //                   Colors.black.withOpacity(.0),
+            //                 ],
+            //               ),
+            //             ),
+            //           ),
+            //         ],
+            //       ),
+            //     ),
+            //   ),
+            // ),
+            // SizedBox(height: 20),
+            // ElevatedButton(
+            //   onPressed: _startAnimation, // 버튼 클릭 시 애니메이션 시작
+            //   child: Text('Start Animation'),
+            // ),
           ],
         ),
       ),
