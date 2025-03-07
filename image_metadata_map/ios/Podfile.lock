@@ -169,16 +169,16 @@ EXTERNAL SOURCES:
 
 SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
-  google_mlkit_commons: 92c769cc2e0a2bfdeb3c38091a36e8a9cc8c63d4
-  google_mlkit_image_labeling: e01dfa7cf050b00f8db79e37ae385c0f4ea82de6
-  google_mlkit_object_detection: d0865775c31032eb7d945eae66d08b0456ba3ce6
-  google_mlkit_text_recognition: d70cc1ed5064db39fce44d77b2c5449adc39a13d
+  google_mlkit_commons: 384e4e206e122b6dad430d3158205e0b2fac6789
+  google_mlkit_image_labeling: d5b60af262f4920caa9e860c5a1b674c17d2ada4
+  google_mlkit_object_detection: 9ef1ca3e752d84172c709dd23cbc35fcf5a97a5f
+  google_mlkit_text_recognition: e540f2aff997f2b0daaa1b4fd5ead3b0b7030adc
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
   GoogleMLKit: eff9e23ec1d90ea4157a1ee2e32a4f610c5b3318
   GoogleToolboxForMac: d1a2cbf009c453f4d6ded37c105e2f67a32206d8
   GoogleUtilities: 26a3abef001b6533cf678d3eb38fd3f614b7872d
   GTMSessionFetcher: 5aea5ba6bd522a239e236100971f10cb71b96ab6
-  image_picker_ios: 7fe1ff8e34c1790d6fff70a32484959f563a928a
+  image_picker_ios: c560581cceedb403a6ff17f2f816d7fea1421fc1
   MLImage: 0ad1c5f50edd027672d8b26b0fee78a8b4a0fc56
   MLKitCommon: 07c2c33ae5640e5380beaaa6e4b9c249a205542d
   MLKitImageLabeling: 7f052589de9ffde213bc2c26854d212ea4dde17a
