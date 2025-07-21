@@ -1,190 +1,99 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
+/// 점 리스트를 받아 도형 내부 채우기 및 윤곽선 그리기를 수행하는 CustomPainter
 class MorphingPainter extends CustomPainter {
+  /// 모핑된 도형을 구성할 점 리스트 (폐회로로 연결됨)
   final List<Offset> sampledPoints;
+
+  /// 도형 윤곽선을 그릴 색상
   final Color strokeColor;
+
+  /// 도형 윤곽선의 굵기 (px 단위)
   final double strokeWidth;
 
-  MorphingPainter({
+  /// 도형 내부를 단색으로 채울 때 사용할 색상 (null 시 기본색 적용)
+  final Color? fillColor;
+
+  /// 도형 내부를 그라데이션으로 채울 때 사용할 Gradient
+  final Gradient? fillGradient;
+
+  /// 생성자: 필수 필드를 주입받아 생성합니다.
+  const MorphingPainter({
     required this.sampledPoints,
     required this.strokeColor,
     required this.strokeWidth,
+    this.fillColor,
+    this.fillGradient,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (sampledPoints.length < 2) return;
+    // 그릴 점이 없으면 바로 종료
+    if (sampledPoints.isEmpty) return;
 
-    /// 1) Chaikin 스무딩 2회 적용
-    List<Offset> smoothPts(List<Offset> pts, int iter) {
-      var list = List<Offset>.from(pts);
-      for (var k = 0; k < iter; k++) {
-        final newPts = <Offset>[];
-        for (var i = 0; i < list.length; i++) {
-          final p0 = list[i];
-          final p1 = list[(i + 1) % list.length];
-          newPts.add(Offset(
-            p0.dx * 0.75 + p1.dx * 0.25,
-            p0.dy * 0.75 + p1.dy * 0.25,
-          ));
-          newPts.add(Offset(
-            p0.dx * 0.25 + p1.dx * 0.75,
-            p0.dy * 0.25 + p1.dy * 0.75,
-          ));
-        }
-        list = newPts;
-      }
-      return list;
-    }
+    // 1) 중심점 계산: 도형 채움 순서 결정용으로 사용
+    final cx = sampledPoints.map((p) => p.dx).reduce((a, b) => a + b) /
+        sampledPoints.length;
+    final cy = sampledPoints.map((p) => p.dy).reduce((a, b) => a + b) /
+        sampledPoints.length;
 
-    /// 2) Catmull–Rom 스플라인 보간 (세그먼트 3)
-    List<Offset> catmullRom(List<Offset> pts, int segs) {
-      if (pts.length < 4) return pts;
-      final p = [
-        pts[pts.length - 2],
-        pts[pts.length - 1],
-        ...pts,
-        pts[0],
-        pts[1],
-      ];
-      final out = <Offset>[];
-      for (int i = 1; i < p.length - 2; i++) {
-        final p0 = p[i - 1], p1 = p[i], p2 = p[i + 1], p3 = p[i + 2];
-        for (int j = 0; j < segs; j++) {
-          final t = j / segs, tt = t * t, ttt = tt * t;
-          final x = 0.5 *
-              ((2 * p1.dx) +
-                  (-p0.dx + p2.dx) * t +
-                  (2 * p0.dx - 5 * p1.dx + 4 * p2.dx - p3.dx) * tt +
-                  (-p0.dx + 3 * p1.dx - 3 * p2.dx + p3.dx) * ttt);
-          final y = 0.5 *
-              ((2 * p1.dy) +
-                  (-p0.dy + p2.dy) * t +
-                  (2 * p0.dy - 5 * p1.dy + 4 * p2.dy - p3.dy) * tt +
-                  (-p0.dy + 3 * p1.dy - 3 * p2.dy + p3.dy) * ttt);
-          out.add(Offset(x, y));
-        }
-      }
-      return out;
-    }
+    // 2) 중심 기준 각도 계산 후 점들을 시계방향으로 정렬
+    final ordered = List<Offset>.from(sampledPoints)
+      ..sort((a, b) {
+        final angA = atan2(a.dy - cy, a.dx - cx);
+        final angB = atan2(b.dy - cy, b.dx - cx);
+        return angA.compareTo(angB);
+      });
 
-    // ───────────────────────────────────────
-    // 샘플링된 점 → 스무딩 → 스플라인
-    final smoothed = smoothPts(sampledPoints, 2);
-    final finalPts = catmullRom(smoothed, 3);
+    // 3) 정렬된 점들로 폐회로 Path 생성
+    final path = Path()..addPolygon(ordered, true);
 
-    // ───────────────────────────────────────
-
-    /// 3) Path 재구성
-    // final path = Path()..moveTo(finalPts[0].dx, finalPts[0].dy);
-
-// 수정된 코드: addPolygon 한 줄만으로 완전한 폐회로(closed loop)를 만듭니다.
-    final path = Path()..addPolygon(finalPts, true);
-
-    for (final p in finalPts.skip(1)) {
-      path.lineTo(p.dx, p.dy);
-    }
-    path.close();
-
-    /// 4) Path 바운딩 박스 계산
+    // 4) 중앙 정렬 및 스케일 계산
     final bounds = path.getBounds();
-
-    /// 5) 스케일 및 중앙 정렬 계산
     final sx = size.width / bounds.width;
     final sy = size.height / bounds.height;
-    final s = sx < sy ? sx : sy;
-    final dx = (size.width - bounds.width * s) / 2 - bounds.left * s;
-    final dy = (size.height - bounds.height * s) / 2 - bounds.top * s;
+    final scale = sx < sy ? sx : sy;
+    final dx = (size.width - bounds.width * scale) / 2 - bounds.left * scale;
+    final dy = (size.height - bounds.height * scale) / 2 - bounds.top * scale;
 
+    // 변환 적용 전 상태 저장
     canvas.save();
-    // 6) 패딩 처리된 영역 안에서 중앙 정렬
+    // 5) 캔버스 이동 및 스케일 적용
     canvas.translate(dx, dy);
-    // 7) 스케일 적용
-    canvas.scale(s, s);
+    canvas.scale(scale, scale);
 
-    /// 8) Path 그리기 (anti-alias + 라인 조인 둥글게)
-    // 5) 항상 매끄럽게 이어지도록 StrokeJoin/RoundCap 적용
-    final paint = Paint()
+    // 6) 내부 채우기: 단색 또는 그라데이션 적용
+    final paintFill = Paint()
       ..isAntiAlias = true
-      ..strokeJoin = StrokeJoin.round // 선들이 만나는 곳을 부드럽게
-      ..strokeCap = StrokeCap.round // 끝점도 둥글게
+      ..style = PaintingStyle.fill;
+    if (fillGradient != null) {
+      paintFill.shader = fillGradient!.createShader(Offset.zero & size);
+    } else {
+      paintFill.color = fillColor ?? Colors.red;
+    }
+    canvas.drawPath(path, paintFill);
+
+    // 7) 윤곽선 그리기: stroke 스타일 적용
+    final paintStroke = Paint()
+      ..isAntiAlias = true
       ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth / s
+      ..strokeWidth = strokeWidth
       ..color = strokeColor;
+    canvas.drawPath(path, paintStroke);
 
-    canvas.drawPath(path, paint);
-
+    // 변환 전 상태 복원
     canvas.restore();
   }
 
   @override
-  bool shouldRepaint(covariant MorphingPainter old) =>
-      old.sampledPoints != sampledPoints ||
-      old.strokeColor != strokeColor ||
-      old.strokeWidth != strokeWidth;
+  bool shouldRepaint(covariant MorphingPainter old) {
+    // 입력값이 변경될 때만 다시 그리기
+    return old.sampledPoints != sampledPoints ||
+        old.strokeColor != strokeColor ||
+        old.strokeWidth != strokeWidth ||
+        old.fillColor != fillColor ||
+        old.fillGradient != fillGradient;
+  }
 }
-
-// /// 보간된 점 리스트를 받아 Path로 재구성하여 그려주는 CustomPainter
-// class MorphingPainter extends CustomPainter {
-//   /// 보간된 도형의 점 리스트
-//   final List<Offset> sampledPoints;
-
-//   /// 선 색상
-//   final Color strokeColor;
-
-//   /// 선 굵기
-//   final double strokeWidth;
-
-//   MorphingPainter({
-//     required this.sampledPoints,
-//     required this.strokeColor,
-//     required this.strokeWidth,
-//   });
-
-//   @override
-//   void paint(Canvas canvas, Size size) {
-//     if (sampledPoints.isEmpty) return;
-
-//     // 1) Path 재구성
-//     final path = Path()..moveTo(sampledPoints[0].dx, sampledPoints[0].dy);
-//     for (final p in sampledPoints.skip(1)) {
-//       path.lineTo(p.dx, p.dy);
-//     }
-//     path.close();
-
-//     // 2) Path 바운딩 박스 계산
-//     final bounds = path.getBounds();
-
-//     // 3) 스케일 값 계산 (padding이 제외된 size 기준)
-//     final scale = (size.width / bounds.width).clamp(0.0, double.infinity);
-//     final scaleY = (size.height / bounds.height).clamp(0.0, double.infinity);
-//     final s = scale < scaleY ? scale : scaleY;
-
-//     // 4) translate 먼저: 패딩 안쪽 좌상단에서
-//     //    (bounds.left, bounds.top) 위치를 빼고,
-//     //    남은 공간을 ½씩 나눠 중앙에 위치하도록 오프셋 계산
-//     final dx = (size.width - bounds.width * s) / 2 - bounds.left * s;
-//     final dy = (size.height - bounds.height * s) / 2 - bounds.top * s;
-
-//     canvas.save();
-//     // 5) 패딩 내에서 중앙으로 이동
-//     canvas.translate(dx, dy);
-//     // 6) 스케일 적용
-//     canvas.scale(s, s);
-
-//     // 7) Path 그리기 (strokeWidth도 스케일 보정)
-//     final paint = Paint()
-//       ..style = PaintingStyle.stroke
-//       ..strokeWidth = strokeWidth / s
-//       ..color = strokeColor;
-//     canvas.drawPath(path, paint);
-
-//     canvas.restore();
-//   }
-
-//   @override
-//   bool shouldRepaint(covariant MorphingPainter old) =>
-//       old.sampledPoints != sampledPoints ||
-//       old.strokeColor != strokeColor ||
-//       old.strokeWidth != strokeWidth;
-// }

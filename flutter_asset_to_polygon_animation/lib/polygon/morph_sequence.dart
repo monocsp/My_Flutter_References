@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_asset_to_polygon_animation/innershadow_widget.dart';
 import 'package:flutter_asset_to_polygon_animation/polygon/contour_extractor.dart';
 import 'package:flutter_asset_to_polygon_animation/polygon/morphing_painter.dart';
 import 'package:flutter_asset_to_polygon_animation/polygon/shape_sample.dart';
@@ -70,6 +71,12 @@ class MorphingShapeView extends StatefulWidget {
   /// 선 굵기
   final double strokeWidth;
 
+  /// 내부 도형 solid 채우기 색상
+  final Color? fillColor;
+
+  /// 내부 도형 그라데이션 채우기
+  final Gradient? fillGradient;
+
   /// 커브 타입 (기본: easeOut)
   /// 이 커브는 모핑 애니메이션의 속도 변화를 조절합니다.
   final Curve curve;
@@ -83,6 +90,8 @@ class MorphingShapeView extends StatefulWidget {
     this.strokeColor = Colors.red,
     this.strokeWidth = 1.0,
     this.curve = Curves.easeOut,
+    this.fillColor,
+    this.fillGradient,
   });
 
   @override
@@ -138,11 +147,18 @@ class _MorphingShapeViewState extends State<MorphingShapeView>
               );
               // 모핑 페인터로 렌더링
               return SizedBox.expand(
-                child: CustomPaint(
-                  painter: MorphingPainter(
-                    sampledPoints: lerped,
-                    strokeColor: widget.strokeColor,
-                    strokeWidth: widget.strokeWidth,
+                child: InnerShadowImage(
+                  blur: 8.0,
+                  shadowColor: Colors.white,
+                  offset: const Offset(0, 0),
+                  child: CustomPaint(
+                    painter: MorphingPainter(
+                      sampledPoints: lerped,
+                      strokeColor: widget.strokeColor,
+                      strokeWidth: widget.strokeWidth,
+                      fillColor: widget.fillColor,
+                      fillGradient: widget.fillGradient,
+                    ),
                   ),
                 ),
               );

@@ -61,48 +61,70 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          // 화면에서 정사각형으로 사용할 최대 크기 계산
-          final side = min(constraints.maxWidth, constraints.maxHeight);
-          final targetSize = Size(side, side);
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          // 배경 이미지
+          Positioned.fill(
+              child: DecoratedBox(
+                  decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: [0.0, 0.3, 1.0],
+              colors: [Color(0xFFFFFFFF), Color(0xFFD4FEFF), Color(0xFF85BEFF)],
+            ),
+          ))),
 
-          // 1) ShapeContourProvider로 ContourData 리스트 로드
-          return FutureBuilder<List<ContourData>>(
-            future: ShapeContourProvider(context)
-                .loadContours(polygonAssets, targetSize),
-            builder: (ctx, snap) {
-              if (snap.hasError) {
-                return Center(child: Text('오류: ${snap.error}'));
-              }
-              if (snap.connectionState != ConnectionState.done) {
-                return const Center(child: CircularProgressIndicator());
-              }
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // 화면에서 정사각형으로 사용할 최대 크기 계산
+                final side = min(constraints.maxWidth, constraints.maxHeight);
+                final targetSize = Size(side, side);
 
-              final contours = snap.data!;
+                // 1) ShapeContourProvider로 ContourData 리스트 로드
+                return FutureBuilder<List<ContourData>>(
+                  future: ShapeContourProvider(context)
+                      .loadContours(polygonAssets, targetSize),
+                  builder: (ctx, snap) {
+                    if (snap.hasError) {
+                      return Center(child: Text('오류: ${snap.error}'));
+                    }
+                    if (snap.connectionState != ConnectionState.done) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-              // 2) MorphingShapeView에 contours 넘겨서 모핑 애니메이션 실행
-              return Center(
-                child: Container(
-                  decoration:
-                      BoxDecoration(border: Border.all(color: Colors.white)),
-                  padding: const EdgeInsets.all(20.0),
-                  width: side,
-                  height: side,
-                  child: MorphingShapeView(
-                    contours: contours,
-                    sampleCount: 800,
-                    morphDuration: const Duration(seconds: 2),
-                    delayDuration: const Duration(seconds: 1),
-                    strokeColor: Colors.blue,
-                    strokeWidth: 2.0,
-                    curve: Curves.easeInOutCirc,
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                    final contours = snap.data!;
+
+                    // 2) MorphingShapeView에 contours 넘겨서 모핑 애니메이션 실행
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(100.0),
+                        child: MorphingShapeView(
+                          contours: contours,
+                          sampleCount: 500,
+                          morphDuration: const Duration(seconds: 2),
+                          delayDuration: const Duration(seconds: 1),
+                          fillGradient: RadialGradient(
+                            colors: [
+                              Colors.white,
+                              Colors.white.withValues(alpha: 0.3)
+                            ],
+                          ),
+                          // fillColor: Colors.red,
+                          strokeColor: Colors.transparent,
+                          strokeWidth: 0.0,
+                          curve: Curves.easeInOutCirc,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
