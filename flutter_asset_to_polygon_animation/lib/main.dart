@@ -43,19 +43,24 @@ class HomePage extends StatelessWidget {
 
   // 모핑할 SVG/이미지 에셋 경로 목록
   final List<String> polygonAssets = const [
-    'assets/dol/img_dol_1_13.png',
-    'assets/dol/img_dol_1_14.png',
-    'assets/dol/img_dol_1_15.png',
-    'assets/dol/img_dol_1_16.png',
-    'assets/dol/img_dol_1_17.png',
-    'assets/dol/img_dol_1_18.png',
-    'assets/dol/img_dol_1_19.png',
-    'assets/dol/img_dol_1_20.png',
-    'assets/dol/img_dol_1_21.png',
-    'assets/dol/img_dol_1_22.png',
-    'assets/dol/img_dol_1_23.png',
-    'assets/dol/img_dol_1_24.png',
-    'assets/dol/img_dol_1_38.png',
+    'assets/dol/img_dol_1_6.png',
+    // 'assets/dol/img_dol_1_7.png',
+    // 'assets/dol/img_dol_1_9.png',
+    // 'assets/dol/img_dol_1_8.png',
+    // 'assets/dol/img_dol_1_12.png',
+    // 'assets/dol/img_dol_1_13.png',
+    // 'assets/dol/img_dol_1_14.png',
+    // 'assets/dol/img_dol_1_15.png',
+    // 'assets/dol/img_dol_1_16.png',
+    // 'assets/dol/img_dol_1_17.png',
+    // 'assets/dol/img_dol_1_18.png',
+    // 'assets/dol/img_dol_1_19.png',
+    // 'assets/dol/img_dol_1_20.png',
+    // 'assets/dol/img_dol_1_21.png',
+    // 'assets/dol/img_dol_1_22.png',
+    // 'assets/dol/img_dol_1_23.png',
+    // 'assets/dol/img_dol_1_24.png',
+    // 'assets/dol/img_dol_1_38.png',
   ];
 
   @override
@@ -65,16 +70,16 @@ class HomePage extends StatelessWidget {
       body: Stack(
         children: [
           // 배경 이미지
-          Positioned.fill(
-              child: DecoratedBox(
-                  decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: [0.0, 0.3, 1.0],
-              colors: [Color(0xFFFFFFFF), Color(0xFFD4FEFF), Color(0xFF85BEFF)],
-            ),
-          ))),
+          // Positioned.fill(
+          //     child: DecoratedBox(
+          //         decoration: BoxDecoration(
+          //   gradient: const LinearGradient(
+          //     begin: Alignment.topCenter,
+          //     end: Alignment.bottomCenter,
+          //     stops: [0.0, 0.3, 1.0],
+          //     colors: [Color(0xFFFFFFFF), Color(0xFFD4FEFF), Color(0xFF85BEFF)],
+          //   ),
+          // ))),
 
           Positioned.fill(
             child: LayoutBuilder(
@@ -104,18 +109,22 @@ class HomePage extends StatelessWidget {
                         child: MorphingShapeView(
                           contours: contours,
                           sampleCount: 500,
-                          morphDuration: const Duration(seconds: 2),
+                          morphDuration: const Duration(milliseconds: 500),
                           delayDuration: const Duration(seconds: 1),
-                          fillGradient: RadialGradient(
+                          // fillColor: Colors.white,
+                          fillGradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            stops: const [0.0, 1.0],
                             colors: [
-                              Colors.white,
-                              Colors.white.withValues(alpha: 0.3)
+                              Colors.black,
+                              Colors.black.withValues(alpha: 0.20)
                             ],
                           ),
                           // fillColor: Colors.red,
-                          strokeColor: Colors.transparent,
+                          strokeColor: Colors.black,
                           strokeWidth: 0.0,
-                          curve: Curves.easeInOutCirc,
+                          curve: Curves.easeInOut,
                         ),
                       ),
                     );

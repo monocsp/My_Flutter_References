@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_asset_to_polygon_animation/innershadow_widget.dart';
 import 'package:flutter_asset_to_polygon_animation/polygon/contour_extractor.dart';
@@ -12,6 +14,8 @@ class MorphSequenceController {
   /// morph 보간값 (0.0 ~ 1.0)
   late final Animation<double> t;
   final AnimationController _ctrl;
+
+  Timer? _timer;
 
   final Curve curve;
 
@@ -31,7 +35,7 @@ class MorphSequenceController {
     // 애니메이션 완료 시 다음 인덱스로 변경 후 지연 후 재시작
     _ctrl.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
-        Future.delayed(delayDuration, () {
+        _timer = Timer(delayDuration, () {
           final next = (currentIndex.value + 1) % itemCount;
           currentIndex.value = next;
           _ctrl.forward(from: 0.0);
@@ -44,6 +48,7 @@ class MorphSequenceController {
 
   /// 리소스 해제
   void dispose() {
+    _timer?.cancel(); // 타이머 취소
     _ctrl.dispose();
     currentIndex.dispose();
   }
@@ -146,21 +151,36 @@ class _MorphingShapeViewState extends State<MorphingShapeView>
                 (i) => Offset.lerp(shapeA[i], shapeB[i], t)!,
               );
               // 모핑 페인터로 렌더링
-              return SizedBox.expand(
-                child: InnerShadowImage(
-                  blur: 8.0,
-                  shadowColor: Colors.white,
-                  offset: const Offset(0, 0),
-                  child: CustomPaint(
-                    painter: MorphingPainter(
-                      sampledPoints: lerped,
-                      strokeColor: widget.strokeColor,
-                      strokeWidth: widget.strokeWidth,
-                      fillColor: widget.fillColor,
-                      fillGradient: widget.fillGradient,
+              return Stack(
+                children: [
+                  SizedBox.expand(
+                    child: CustomPaint(
+                      painter: MorphingPainter(
+                        sampledPoints: lerped,
+                        strokeColor: widget.strokeColor,
+                        strokeWidth: widget.strokeWidth,
+                        fillColor: widget.fillColor,
+                        fillGradient: widget.fillGradient,
+                      ),
                     ),
                   ),
-                ),
+                  SizedBox.expand(
+                    child: InnerShadowImage(
+                      blur: 8.0,
+                      shadowColor: Colors.white,
+                      offset: const Offset(0, 0),
+                      child: CustomPaint(
+                        painter: MorphingPainter(
+                          sampledPoints: lerped,
+                          strokeColor: widget.strokeColor,
+                          strokeWidth: widget.strokeWidth,
+                          fillColor: widget.fillColor,
+                          fillGradient: widget.fillGradient,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               );
             },
           );
